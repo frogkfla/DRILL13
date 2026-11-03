@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title description">
+  <title id="title">Boy character state diagram</title>
+  <desc id="description">State transitions between Idle, Sleep, and Run, including space-key behavior and ball-launch messages.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52627a"/>
+    </marker>
+    <style>
+      text { font-family: "Segoe UI", "Malgun Gothic", sans-serif; fill: #172033; }
+      .title { font-size: 30px; font-weight: 700; }
+      .subtitle { font-size: 16px; fill: #52627a; }
+      .state-title { font-size: 23px; font-weight: 700; }
+      .state-note { font-size: 15px; fill: #52627a; }
+      .edge { fill: none; stroke: #52627a; stroke-width: 3; marker-end: url(#arrow); }
+      .label { font-size: 15px; font-weight: 600; }
+      .small { font-size: 14px; fill: #39465c; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="760" rx="24" fill="#f5f7fb"/>
+  <text class="title" x="600" y="52" text-anchor="middle">소년 캐릭터 상태 다이어그램</text>
+  <text class="subtitle" x="600" y="82" text-anchor="middle">입력에 따른 상태 전이와 스페이스 키 처리</text>
+
+  <!-- State nodes -->
+  <rect x="365" y="130" width="260" height="115" rx="22" fill="#e1f3e8" stroke="#3b8c5a" stroke-width="3"/>
+  <text class="state-title" x="495" y="177" text-anchor="middle">IDLE</text>
+  <text class="state-note" x="495" y="207" text-anchor="middle">대기</text>
+
+  <rect x="365" y="500" width="260" height="115" rx="22" fill="#e9e7fb" stroke="#7566b5" stroke-width="3"/>
+  <text class="state-title" x="495" y="547" text-anchor="middle">SLEEP</text>
+  <text class="state-note" x="495" y="577" text-anchor="middle">수면</text>
+
+  <rect x="835" y="315" width="260" height="115" rx="22" fill="#e2efff" stroke="#3979bd" stroke-width="3"/>
+  <text class="state-title" x="965" y="362" text-anchor="middle">RUN</text>
+  <text class="state-note" x="965" y="392" text-anchor="middle">이동 중</text>
+
+  <!-- Idle to Sleep and Sleep to Idle -->
+  <path class="edge" d="M430 245 C395 315 395 430 430 500"/>
+  <rect x="285" y="337" width="150" height="48" rx="10" fill="#f5f7fb"/>
+  <text class="label" x="360" y="357" text-anchor="middle">5초 동안 대기</text>
+  <text class="small" x="360" y="376" text-anchor="middle">fall_asleep</text>
+
+  <path class="edge" d="M560 500 C595 430 595 315 560 245"/>
+  <rect x="565" y="337" width="160" height="48" rx="10" fill="#f5f7fb"/>
+  <text class="label" x="645" y="357" text-anchor="middle">Space</text>
+  <text class="small" x="645" y="376" text-anchor="middle">wake_up</text>
+
+  <!-- Idle and Sleep to Run -->
+  <path class="edge" d="M625 205 C720 230 780 285 840 332"/>
+  <rect x="665" y="218" width="165" height="48" rx="10" fill="#f5f7fb"/>
+  <text class="label" x="747" y="238" text-anchor="middle">← / → 누름</text>
+  <text class="small" x="747" y="257" text-anchor="middle">start_run</text>
+
+  <path class="edge" d="M625 540 C720 515 780 460 840 413"/>
+  <rect x="665" y="473" width="165" height="48" rx="10" fill="#f5f7fb"/>
+  <text class="label" x="747" y="493" text-anchor="middle">← / → 누름</text>
+  <text class="small" x="747" y="512" text-anchor="middle">start_run</text>
+
+  <!-- Run to Idle -->
+  <path class="edge" d="M965 315 C965 120 760 105 625 155"/>
+  <rect x="775" y="111" width="190" height="48" rx="10" fill="#f5f7fb"/>
+  <text class="label" x="870" y="131" text-anchor="middle">방향 키 모두 놓음</text>
+  <text class="small" x="870" y="150" text-anchor="middle">stop_run</text>
+
+  <!-- Space-key actions without state changes -->
+  <path class="edge" d="M450 130 C385 58 605 58 540 130"/>
+  <rect x="410" y="94" width="170" height="46" rx="10" fill="#fff4d6" stroke="#e2b64e"/>
+  <text class="label" x="495" y="113" text-anchor="middle">Space</text>
+  <text class="small" x="495" y="131" text-anchor="middle">볼 생성·발사</text>
+
+  <path class="edge" d="M1095 350 C1170 300 1170 445 1095 395"/>
+  <rect x="1000" y="445" width="185" height="66" rx="10" fill="#fff4d6" stroke="#e2b64e"/>
+  <text class="label" x="1092" y="469" text-anchor="middle">Space</text>
+  <text class="small" x="1092" y="490" text-anchor="middle">볼 생성·발사</text>
+
+  <!-- Legend -->
+  <rect x="125" y="660" width="950" height="62" rx="14" fill="#ffffff" stroke="#d7deea"/>
+  <text class="label" x="155" y="686">발사 방향:</text>
+  <text class="small" x="290" y="686">face_dir = 1 → 오른쪽으로 볼 발사</text>
+  <text class="small" x="650" y="686">face_dir = -1 → 왼쪽으로 볼 발사</text>
+  <text class="small" x="600" y="710" text-anchor="middle">캐릭터 앞에서 볼 생성 후 방향에 따라 이동 · SLEEP의 Space는 기상에만 사용</text>
+</svg>

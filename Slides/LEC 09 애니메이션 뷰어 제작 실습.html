@@ -1,0 +1,1046 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AI와 함께 소닉 애니메이션 뷰어를 설계·구현·검증하는 실습 강의">
+<title>LEC 09 애니메이션 뷰어 제작 실습</title>
+<style>
+
+    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+    @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+    :root {
+      --bg: #edf1f5;
+      --paper: #ffffff;
+      --ink: #172033;
+      --muted: #5c6776;
+      --line: #d7dde6;
+      --accent: #1767a8;
+      --green: #16806f;
+      --code-bg: #101827;
+      --code-ink: #f0f6ff;
+      --code-font: "JetBrains Mono", Consolas, "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Pretendard", "Malgun Gothic", "Segoe UI", Arial, sans-serif;
+    }
+
+    body { overflow: hidden; }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header.top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px 24px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 18px;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .counter {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .bar {
+      width: 180px;
+      height: 8px;
+      background: #dfe6ef;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+    }
+
+    main {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      padding: 18px 24px;
+    }
+
+    .stage {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slide {
+      display: none;
+      width: min(100%, 1240px);
+      height: min(100%, calc((100vw - 420px) * 0.5625));
+      min-height: 620px;
+      max-height: calc(100vh - 134px);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 14px 34px rgba(23, 32, 51, 0.14);
+      grid-template-rows: auto 1fr;
+    }
+
+    .slide.active {
+      display: grid;
+    }
+
+    .slide-head {
+      padding: 28px 34px 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fff, #f7f9fc);
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--accent);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .pill {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #e8f2fb;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 46px;
+      line-height: 1.14;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 22px;
+      line-height: 1.4;
+    }
+
+    .slide-body {
+      min-height: 0;
+      padding: 26px 34px 30px;
+      overflow: auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.78fr);
+      gap: 26px;
+      align-items: start;
+    }
+
+    .bullets {
+      margin: 0;
+      padding-left: 28px;
+      font-size: 27px;
+      line-height: 1.44;
+    }
+
+    .bullets li { margin-bottom: 14px; }
+    .bullets strong { color: var(--accent); }
+
+    .note {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-left: 5px solid var(--green);
+      background: #edf8f5;
+      border-radius: 4px 8px 8px 4px;
+      font-size: 20px;
+      line-height: 1.5;
+    }
+
+    pre {
+      margin: 0;
+      padding: 18px;
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      overflow: auto;
+      font-family: var(--code-font);
+      font-size: 18px;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    code.fn {
+      color: #8ee9ff;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .diagram {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      background: #f6f8fb;
+    }
+
+    .flow {
+      display: grid;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .box {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 10px;
+      border: 2px solid #b8cadc;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .arrow {
+      color: var(--accent);
+      font-size: 28px;
+      font-weight: 900;
+    }
+
+    .canvas {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      border: 2px solid #31435c;
+      border-radius: 8px;
+      background:
+        linear-gradient(#d9e4ef 1px, transparent 1px),
+        linear-gradient(90deg, #d9e4ef 1px, transparent 1px),
+        #fff;
+      background-size: 10% 10%;
+      overflow: hidden;
+    }
+
+    .grass {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 22%;
+      background: linear-gradient(180deg, #72bc62, #347a3d);
+      border-top: 4px solid #275e31;
+    }
+
+    .boy {
+      position: absolute;
+      width: 48px;
+      height: 64px;
+      border: 2px solid #183152;
+      border-radius: 18px 18px 10px 10px;
+      background: linear-gradient(180deg, #4e90d8 0 54%, #263d66 54% 100%);
+      box-shadow: 0 5px 0 rgba(24, 49, 82, 0.12);
+    }
+
+    .boy::before {
+      content: "";
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      left: 10px;
+      top: -18px;
+      border: 2px solid #183152;
+      border-radius: 50%;
+      background: #f1c69a;
+    }
+
+    .boy.center { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    .boy.a { left: 15%; bottom: 16%; }
+    .boy.b { left: 43%; bottom: 43%; }
+    .boy.c { left: 68%; bottom: 20%; }
+
+    .label {
+      position: absolute;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #31435c;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .lb { left: 8px; bottom: 8px; }
+    .rb { right: 8px; bottom: 8px; }
+    .lt { left: 8px; top: 8px; }
+    .ct { left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--accent); }
+
+    details.detail {
+      margin-top: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    details.detail summary {
+      padding: 15px 18px;
+      cursor: pointer;
+      list-style: none;
+      background: #f2f7fc;
+      color: var(--accent);
+      font-size: 19px;
+      font-weight: 800;
+    }
+
+    details.detail summary::-webkit-details-marker { display: none; }
+
+    .detail-text {
+      padding: 18px;
+      color: #263244;
+      font-size: 18px;
+      line-height: 1.62;
+    }
+
+    .detail-text p {
+      margin: 0 0 14px;
+    }
+
+    .panel {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #f7f9fc;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .panel-body {
+      min-height: 0;
+      overflow: auto;
+      padding: 16px 18px 20px;
+    }
+
+    .toc {
+      display: grid;
+      gap: 8px;
+    }
+
+    .toc button {
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      padding: 9px 10px;
+      text-align: left;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.32;
+      cursor: pointer;
+    }
+
+    .toc button:hover { background: #eef5fb; }
+    .toc button.active {
+      border-color: #b8d6ee;
+      background: #e6f2fb;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .func-card {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .func-card h3 {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 19px;
+    }
+
+    .func-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .func-card .sample {
+      display: block;
+      padding: 10px;
+      border-radius: 6px;
+      background: #eef2f6;
+      color: var(--ink);
+      font-family: var(--code-font);
+      white-space: pre-wrap;
+    }
+
+    footer.controls {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 24px 16px;
+      background: #fff;
+      border-top: 1px solid var(--line);
+    }
+
+    button.nav, button.util {
+      height: 42px;
+      padding: 0 16px;
+      border: 1px solid #b8c6d6;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.nav:hover, button.util:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    button.nav:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .assignment-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .assignment {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f6f8fb;
+    }
+
+    .assignment h3 {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 24px;
+    }
+
+    .assignment ul {
+      margin: 0;
+      padding-left: 22px;
+      font-size: 19px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1080px) {
+      body { overflow: auto; }
+      .app { height: auto; min-height: 100vh; }
+      main { grid-template-columns: 1fr; }
+      .slide { height: auto; min-height: 0; max-height: none; }
+      .grid, .assignment-grid { grid-template-columns: 1fr; }
+      footer.controls {
+        position: sticky;
+        bottom: 0;
+        grid-template-columns: 1fr 1fr;
+      }
+      .hint { display: none; }
+    }
+  
+
+    .loader {
+      width: min(100%, 900px);
+      margin: 40px auto;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 14px 34px rgba(23, 32, 51, 0.12);
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .loader h1 {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .loader input {
+      margin-top: 14px;
+      font-size: 16px;
+    }
+
+    body.fullscreen-mode {
+      overflow: hidden;
+      background: #000;
+      --fs-title: clamp(60px, 3.42vw, 110px);
+      --fs-subtitle: clamp(26px, 1.5vw, 53px);
+      --fs-kicker: clamp(20px, 1.14vw, 38px);
+      --fs-pill: clamp(16px, 0.86vw, 29px);
+      --fs-body: clamp(38px, 2.18vw, 70px);
+      --fs-note: clamp(26px, 1.44vw, 48px);
+      --fs-code: clamp(23px, 1.25vw, 41px);
+      --fs-flow: clamp(26px, 1.5vw, 50px);
+      --fs-label: clamp(20px, 1.14vw, 36px);
+      --fs-assignment-title: clamp(31px, 1.74vw, 58px);
+      --fs-assignment-body: clamp(26px, 1.38vw, 46px);
+      --fs-pad-x: clamp(50px, 2.64vw, 110px);
+      --fs-pad-y: clamp(34px, 1.86vw, 77px);
+    }
+
+    body.fullscreen-mode header.top,
+    body.fullscreen-mode .panel,
+    body.fullscreen-mode footer.controls,
+    body.fullscreen-mode details.detail {
+      display: none;
+    }
+
+    body.fullscreen-mode .app {
+      height: 100vh;
+      min-height: 0;
+      display: block;
+    }
+
+    body.fullscreen-mode main {
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      display: block;
+    }
+
+    body.fullscreen-mode .stage {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    body.fullscreen-mode .slide {
+      width: 100vw;
+      height: 100vh;
+      min-height: 0;
+      max-height: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    body.fullscreen-mode .slide-head {
+      padding: var(--fs-pad-y) var(--fs-pad-x) clamp(24px, 1.26vw, 50px);
+    }
+
+    body.fullscreen-mode .kicker {
+      font-size: var(--fs-kicker);
+      margin-bottom: clamp(12px, 0.62vw, 24px);
+    }
+
+    body.fullscreen-mode .pill {
+      font-size: var(--fs-pill);
+      padding: clamp(6px, 0.34vw, 12px) clamp(12px, 0.62vw, 24px);
+    }
+
+    body.fullscreen-mode h1 {
+      font-size: var(--fs-title);
+      line-height: 1.12;
+    }
+
+    body.fullscreen-mode .subtitle {
+      margin-top: clamp(14px, 0.74vw, 29px);
+      font-size: var(--fs-subtitle);
+      line-height: 1.38;
+    }
+
+    body.fullscreen-mode .slide-body {
+      padding: var(--fs-pad-y) var(--fs-pad-x) clamp(41px, 2.16vw, 86px);
+    }
+
+    body.fullscreen-mode .grid {
+      gap: clamp(36px, 1.86vw, 77px);
+      grid-template-columns: minmax(0, 1fr) minmax(clamp(408px, 21.24vw, 816px), 0.8fr);
+    }
+
+    body.fullscreen-mode .bullets {
+      padding-left: clamp(38px, 2vw, 79px);
+      font-size: var(--fs-body);
+      line-height: 1.42;
+    }
+
+    body.fullscreen-mode .bullets li {
+      margin-bottom: clamp(19px, 1vw, 41px);
+    }
+
+    body.fullscreen-mode .note {
+      margin-top: clamp(24px, 1.26vw, 50px);
+      padding: clamp(22px, 1.14vw, 46px) clamp(24px, 1.26vw, 50px);
+      border-left-width: clamp(7px, 0.38vw, 14px);
+      font-size: var(--fs-note);
+      line-height: 1.5;
+    }
+
+    body.fullscreen-mode pre {
+      padding: clamp(24px, 1.26vw, 50px);
+      font-size: var(--fs-code);
+      line-height: 1.45;
+    }
+
+    body.fullscreen-mode .diagram {
+      padding: clamp(26px, 1.38vw, 55px);
+    }
+
+    body.fullscreen-mode .flow {
+      gap: clamp(17px, 0.88vw, 36px);
+      font-size: var(--fs-flow);
+    }
+
+    body.fullscreen-mode .box {
+      min-height: clamp(91px, 4.74vw, 182px);
+      padding: clamp(22px, 1.14vw, 46px);
+    }
+
+    body.fullscreen-mode .arrow {
+      font-size: clamp(41px, 2.12vw, 82px);
+    }
+
+    body.fullscreen-mode .canvas {
+      min-height: clamp(504px, 26.28vw, 912px);
+    }
+
+    body.fullscreen-mode .label {
+      padding: clamp(6px, 0.34vw, 12px) clamp(11px, 0.56vw, 22px);
+      font-size: var(--fs-label);
+    }
+
+    body.fullscreen-mode .assignment-grid {
+      gap: clamp(24px, 1.26vw, 50px);
+    }
+
+    body.fullscreen-mode .assignment {
+      padding: clamp(24px, 1.26vw, 50px);
+    }
+
+    body.fullscreen-mode .assignment h3 {
+      font-size: var(--fs-assignment-title);
+      margin-bottom: clamp(14px, 0.74vw, 29px);
+    }
+
+    body.fullscreen-mode .assignment ul {
+      padding-left: clamp(31px, 1.62vw, 62px);
+      font-size: var(--fs-assignment-body);
+      line-height: 1.45;
+    }
+
+/* Lecture content adapters; the LEC05 shell and typography remain authoritative. */
+*{letter-spacing:0}button{font-family:inherit}button:focus-visible,summary:focus-visible{outline:3px solid #bb8619;outline-offset:3px}
+.app{grid-template-columns:minmax(0,1fr)}main,.slide,.content,.visual{min-width:0}
+.content{font-size:27px;line-height:1.44;overflow-wrap:anywhere}
+.content p{margin:0 0 18px}.content ul,.content ol{margin:0;padding-left:28px}
+.content li{margin-bottom:14px}.content strong{color:var(--accent)}
+.content pre+pre{margin-top:18px}pre{max-width:100%}code{font-family:var(--code-font)}
+p code,li code{font-size:.9em;overflow-wrap:anywhere}
+table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:19px;margin:16px 0}
+th,td{padding:12px;text-align:left;border-bottom:1px solid var(--line);overflow-wrap:anywhere}th{color:var(--accent);background:#eef5fb}
+.visual svg{display:block;width:100%;height:auto;background:#f6f8fb;border:1px solid var(--line);border-radius:8px}
+.visual text{font-family:Pretendard,'Malgun Gothic',sans-serif;fill:var(--ink);font-size:17px}
+.visual-image{display:block;width:100%;max-height:420px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:8px}
+.visual-caption{margin:8px 0 0;color:var(--muted);font-size:14px;text-align:center}
+.lec-flow{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:16px 0}
+.lec-flow b{font-size:20px;font-weight:700;padding:12px;border:2px solid #b8cadc;border-radius:8px;background:#fff}
+.lec-flow span{color:var(--accent);font-size:28px}.console{margin-top:18px}
+.extras{border-top:1px solid var(--line);padding-top:16px;margin-top:22px;font-size:18px;line-height:1.62}
+.extras h2{font-size:19px;color:var(--accent);margin:0 0 10px}.extras pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.prompt{margin-top:22px}.prompt pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.copy{display:block;margin:0 0 8px auto;background:#fff;border:1px solid #b8c6d6;border-radius:6px;padding:7px 12px;cursor:pointer}
+.detail-text pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:14px 0}.detail-text{overflow-wrap:anywhere}
+.cover-slide{grid-template-rows:1fr!important}.cover{align-self:center;padding:42px 48px}
+.cover h1{line-height:1.3}.cover .date{margin-top:38px;font-size:22px;color:var(--muted)}.cover .presenter{margin-top:16px;font-size:24px}
+.cover-mode .panel{visibility:hidden}.cover-mode .top .brand,.cover-mode .counter{visibility:hidden}
+.cover-mode #detail-button{display:none}.cover-mode .controls{grid-template-columns:auto 1fr auto auto}
+.status{position:fixed;bottom:80px;left:24px;background:var(--ink);color:white;padding:10px 16px;border-radius:6px;z-index:10}.status:empty{display:none}
+body.fullscreen-mode .content{font-size:var(--fs-body)}
+body.fullscreen-mode .extras,body.fullscreen-mode .copy{display:none}
+body.fullscreen-mode .prompt{margin-top:24px}
+body.fullscreen-mode .cover{padding:var(--fs-pad-y) var(--fs-pad-x)}
+body.fullscreen-mode .cover h1{font-size:var(--fs-title)}
+body.fullscreen-mode .cover .date,body.fullscreen-mode .cover .presenter{font-size:var(--fs-subtitle)}
+@media(max-width:1080px){.cover-mode .panel{display:none}.cover-mode .controls{grid-template-columns:1fr 1fr}.content pre{font-size:16px}.visual{margin-top:20px}.content{font-size:23px}}
+@media(max-width:600px){header.top{padding:12px 14px;gap:10px}.bar{width:65px}.brand strong{font-size:15px}.brand span{font-size:12px}
+main{padding:12px;gap:12px}.slide-head{padding:22px 20px 16px}h1{font-size:30px}.subtitle{font-size:18px}
+.slide-body{padding:20px}.content{font-size:21px}.content pre{font-size:14px}.detail-text{font-size:17px}
+.pill{font-size:12px}.kicker{font-size:14px}footer.controls{padding:10px 12px}.cover{padding:30px 24px}.cover .date{font-size:18px}.cover .presenter{font-size:20px}
+table{font-size:15px}td,th{padding:8px}.panel-head h2{font-size:18px}
+body.fullscreen-mode h1{font-size:32px}body.fullscreen-mode .slide-head,body.fullscreen-mode .slide-body{padding:24px}
+body.fullscreen-mode .grid{grid-template-columns:minmax(0,1fr)}body.fullscreen-mode .content{font-size:23px}
+body.fullscreen-mode .cover h1{font-size:34px}body.fullscreen-mode .cover{padding:24px}}
+.fn{display:inline;border:0;padding:0;background:none;color:#8ee9ff;font:inherit;text-decoration:underline;cursor:pointer}
+
+/* The LEC05 shell is unchanged; these cards only arrange LEC09 prompt content. */
+.ai-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+.ai-pair section{min-width:0;padding:18px 20px;border:1px solid var(--line);border-radius:8px;background:#f8fafc}
+.ai-pair section:first-child{background:#eef5fb;border-color:#b8cadc}
+.ai-pair h2{margin:0 0 14px;font-size:20px;color:var(--accent)}
+.ai-pair blockquote{margin:0;padding:0 0 0 15px;border-left:4px solid var(--accent)}
+.ai-pair blockquote p{margin:0}.ai-pair ul{padding-left:23px}
+.ai-pair li{margin-bottom:10px}.ai-pair code{font-size:.83em}
+.ai-pair .ai-request,.ai-pair .ai-response{font-size:21px;line-height:1.46}
+body.fullscreen-mode .ai-pair .ai-request,body.fullscreen-mode .ai-pair .ai-response{font-size:22px}
+@media(max-width:900px){.ai-pair{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.ai-pair{gap:12px}.ai-pair section{padding:14px}.ai-pair .ai-request,.ai-pair .ai-response{font-size:18px}}
+
+</style>
+</head>
+<body class="cover-mode"><div class="app">
+<header class="top"><div class="brand"><strong>2D 게임 프로그래밍 - LEC09</strong><span id="slide-title"></span></div><div class="counter"><div class="bar"><div class="bar-fill" id="bar"></div></div><span id="count"></span></div></header>
+<main><section class="stage" id="stage" aria-label="강의 슬라이드"></section><aside class="panel"><div class="panel-head"><h2>목차와 함수 설명</h2></div><div class="panel-body"><nav class="toc" id="toc" aria-label="슬라이드 목차"></nav><section class="func-card" id="func-card"><h3>함수 설명</h3><p>코드의 함수 이름을 선택하면 설명이 표시됩니다.</p></section></div></aside></main>
+<footer class="controls"><button class="nav" id="prev">이전</button><div class="hint" id="page"></div><button class="util" id="detail-button" aria-expanded="false">상세 설명</button><button class="util" id="fullscreen">전체 화면</button><button class="nav" id="next">다음</button></footer>
+</div><div class="status" id="status" role="status"></div>
+<script type="application/json" id="deck-data">{
+  "title": "LEC 09 애니메이션 뷰어 제작 실습",
+  "date": "HTML을 여는 날짜 자동 표시",
+  "presenter": "한국공학대학교 이대현 교수",
+  "slides": [
+    {
+      "id": "lec09-viewer-title",
+      "type": "title",
+      "navTitle": "제목",
+      "section": "",
+      "kicker": "LEC 09",
+      "subtitle": "한국공학대학교 이대현 교수",
+      "layout": "title",
+      "visual": "없음",
+      "number": 1,
+      "title": "LEC 09 애니메이션 뷰어 제작 실습",
+      "body": "\u003cul>\n\u003cli>LEC 09 애니메이션 뷰어 제작 실습\u003c/li>\n\u003cli>수업일: HTML을 여는 날짜 자동 표시\u003c/li>\n\u003cli>한국공학대학교 이대현 교수\u003c/li>\n\u003c/ul>",
+      "detailHtml": "",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-objectives",
+      "type": "content",
+      "navTitle": "학습 목표",
+      "section": "수업 안내",
+      "kicker": "학습 목표",
+      "subtitle": "요구사항을 코드와 실행 결과까지 연결한다",
+      "layout": "bullets",
+      "visual": "없음",
+      "number": 2,
+      "title": "학습 목표",
+      "body": "\u003col>\n\u003cli>AI 를 활용한 개발 절차를 이해한다.\u003c/li>\n\u003cli>개략적인 요구사항을 검증 가능한 개발 문서로 구체화한다.\u003c/li>\n\u003cli>AI가 만든 문서와 코드를 직접 확인하고 수정한다.\u003c/li>\n\u003cli>작업 과정을 작은 단위의 커밋으로 남긴다.\u003c/li>\n\u003c/ol>",
+      "detailHtml": "\u003cp>완성된 화면만 보는 실습이 아니다. 요구사항을 정하는 사람과 이를 구현하는 AI의 역할을 구분하고, 각 단계의 산출물을 확인한다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-workflow",
+      "type": "content",
+      "navTitle": "진행 순서",
+      "section": "수업 안내",
+      "kicker": "전체 흐름",
+      "subtitle": "초안은 짧게 쓰고, 검토하면서 확정한다",
+      "layout": "diagram",
+      "visual": "단계별 산출물과 사람의 확인 지점을 함께 표시한다.",
+      "number": 3,
+      "title": "이번 실습의 진행 순서",
+      "body": "\u003ctable>\n\u003cthead>\n\u003ctr>\n\u003cth>단계\u003c/th>\n\u003cth>산출물\u003c/th>\n\u003cth>사람이 확인할 것\u003c/th>\n\u003c/tr>\n\u003c/thead>\n\u003ctbody>\n\u003ctr>\n\u003ctd>브랜치 개설\u003c/td>\n\u003ctd>\u003ccode>feature/animation-viewer\u003c/code>\u003c/td>\n\u003ctd>작업 위치\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>요구사항 초안\u003c/td>\n\u003ctd>\u003ccode>PRE_PRD.md\u003c/code>\u003c/td>\n\u003ctd>꼭 필요한 기능\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>개발 문서 작성\u003c/td>\n\u003ctd>\u003ccode>PRD.md\u003c/code>\u003c/td>\n\u003ctd>빠진 조건과 모순\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>단계별 구현\u003c/td>\n\u003ctd>Python 코드와 커밋\u003c/td>\n\u003ctd>실행 결과\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>마무리\u003c/td>\n\u003ctd>검증 기록과 커밋\u003c/td>\n\u003ctd>완료 기준 충족\u003c/td>\n\u003c/tr>\n\u003c/tbody>\n\u003c/table>",
+      "detailHtml": "\u003cp>초안은 완벽할 필요가 없다. 필요한 동작을 먼저 적고, AI가 작성한 개발 문서를 검토하면서 빠진 조건을 보완한다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-branch-prompt",
+      "type": "content",
+      "navTitle": "브랜치 개설",
+      "section": "프롬프트와 응답",
+      "kicker": "실제 입력 1",
+      "subtitle": "기능 작업을 독립된 브랜치에서 시작한다",
+      "layout": "comparison",
+      "visual": "실제 입력과 AI의 작업 결과를 구분한다.",
+      "number": 4,
+      "title": "프롬프트 ① — 브랜치 개설",
+      "body": "\u003cdiv class=\"ai-pair\">\u003csection class=\"ai-request\" aria-label=\"prompt\">\u003ch2>실제 입력 프롬프트\u003c/h2>\u003cblockquote>\n\u003cp>애니매에션 뷰어 구현을 위한 브랜치를 만들어줘.\u003c/p>\n\u003c/blockquote>\u003c/section>\u003csection class=\"ai-response\" aria-label=\"response\">\u003ch2>AI 응답 요약\u003c/h2>\u003cul>\n\u003cli>\u003ccode>feature/animation-viewer\u003c/code> 브랜치를 만들고 전환했다.\u003c/li>\n\u003cli>브랜치 상태를 확인하고, 기존의 추적되지 않은 파일은 그대로 두었다.\u003c/li>\n\u003c/ul>\u003c/section>\u003c/div>",
+      "detailHtml": "\u003cp>프롬프트의 오타도 실제 입력 그대로 남겼다. 학생은 브랜치 이름과 현재 브랜치를 확인한 뒤 다음 작업으로 넘어간다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-draft",
+      "type": "content",
+      "navTitle": "요구사항 초안",
+      "section": "요구사항",
+      "kicker": "PRE_PRD.md",
+      "subtitle": "처음에는 구현 방법보다 필요한 동작을 적는다",
+      "layout": "comparison",
+      "visual": "없음",
+      "number": 5,
+      "title": "요구사항 초안 작성",
+      "body": "\u003ctable>\n\u003cthead>\n\u003ctr>\n\u003cth>항목\u003c/th>\n\u003cth>\u003ccode>PRE_PRD.md\u003c/code>에 적은 조건\u003c/th>\n\u003c/tr>\n\u003c/thead>\n\u003ctbody>\n\u003ctr>\n\u003ctd>도구와 파일\u003c/td>\n\u003ctd>Python, pico2d, 단일\u003ccode>sonic_animation_viewer.py\u003c/code>, \u003ccode>sonic-sprite.png\u003c/code>\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>재생\u003c/td>\n\u003ctd>이미지의 모든 동작을 원본 크기의 4배로 표시\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>전환\u003c/td>\n\u003ctd>동작별 5회 반복, 1초 정지, 다음 동작으로 전환\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>전체 순환\u003c/td>\n\u003ctd>마지막 동작 뒤 첫 동작부터 다시 재생\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>개발 과정\u003c/td>\n\u003ctd>단계별 구현과 커밋을 반복해 최소 20회 커밋\u003c/td>\n\u003c/tr>\n\u003c/tbody>\n\u003c/table>",
+      "detailHtml": "\u003cp>이 초안만으로도 개발 방향을 정할 수 있다. 다만 어떤 동작이 화면에서 이동하는지, 프레임을 어떻게 자르는지, 정지 중 어떤 화면을 유지하는지는 아직 결정되지 않았다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-draft-resume",
+      "type": "content",
+      "navTitle": "PRD 작성 재개",
+      "section": "프롬프트와 응답",
+      "kicker": "실제 입력 2",
+      "subtitle": "짧은 요구사항을 구현 규칙과 완료 기준으로 확장한다",
+      "layout": "comparison",
+      "visual": "실제 입력과 AI의 작업 결과를 구분한다.",
+      "number": 6,
+      "title": "프롬프트 ② — 초안을 개발 문서로 바꾸기",
+      "body": "\u003cdiv class=\"ai-pair\">\u003csection class=\"ai-request\" aria-label=\"prompt\">\u003ch2>실제 입력 프롬프트\u003c/h2>\u003cblockquote>\n\u003cp>PRE_PRD.md 를 바탕으로 개발 문서 PRD.md 를 작성해줘\u003c/p>\n\u003c/blockquote>\u003c/section>\u003csection class=\"ai-response\" aria-label=\"response\">\u003ch2>AI 응답 요약\u003c/h2>\u003cul>\n\u003cli>초안과 스프라이트 시트를 확인해 \u003ccode>PRD.md\u003c/code>를 작성했다.\u003c/li>\n\u003cli>10종 동작의 76프레임, 4배 출력, 5회 반복과 1초 정지를 명시했다.\u003c/li>\n\u003cli>프레임 좌표, 단계별 개발 계획, 검증 기준을 추가했다.\u003c/li>\n\u003c/ul>\u003c/section>\u003c/div>",
+      "detailHtml": "\u003cp>PRD를 읽을 때는 초안의 조건이 빠짐없이 반영됐는지부터 확인한다. AI가 새로 제안한 수치와 방식은 그대로 받아들이기 전에 자료와 대조한다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-movement-prompt",
+      "type": "content",
+      "navTitle": "이동 조건 보완",
+      "section": "프롬프트와 응답",
+      "kicker": "실제 입력 3",
+      "subtitle": "자세 변화와 화면 위치 변화를 동시에 요구한다",
+      "layout": "comparison",
+      "visual": "실제 입력과 AI의 작업 결과를 구분한다.",
+      "number": 7,
+      "title": "프롬프트 ③ — 이동 조건 보완",
+      "body": "\u003cdiv class=\"ai-pair\">\u003csection class=\"ai-request\" aria-label=\"prompt\">\u003ch2>실제 입력 프롬프트\u003c/h2>\u003cblockquote>\n\u003cp>이동이 들어가는 동작의 경우는 애니메이션과 동시에 이동도 되어야 함. md 를 수정해.\u003c/p>\n\u003c/blockquote>\u003c/section>\u003csection class=\"ai-response\" aria-label=\"response\">\u003ch2>AI 응답 요약\u003c/h2>\u003cul>\n\u003cli>이동 동작 8종은 프레임 재생 중 위치도 계속 바뀌도록 PRD를 고쳤다.\u003c/li>\n\u003cli>회전 진입과 포즈는 화면 중앙에서 재생하도록 구분했다.\u003c/li>\n\u003cli>경계에서의 방향 반전, 점프 궤적, 정지 중 위치 고정을 완료 기준에 넣었다.\u003c/li>\n\u003c/ul>\u003c/section>\u003c/div>",
+      "detailHtml": "\u003cp>프레임이 바뀌는 순간에만 위치를 움직이면 캐릭터가 끊어져 보인다. 프레임 전환과 위치 이동은 각각 실제 경과 시간을 사용한다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-manual-edit",
+      "type": "content",
+      "navTitle": "직접 문서 수정",
+      "section": "문서 검토",
+      "kicker": "직접 수정",
+      "subtitle": "PRD의 캔버스 값을 1200×600으로 변경했다",
+      "layout": "comparison",
+      "visual": "변경 전후 수치와 영향을 받는 절을 함께 보여 준다.",
+      "number": 8,
+      "title": "사람이 직접 고친 캔버스 크기",
+      "body": "\u003cpre>\u003ccode class=\"language-text\">800×600  →  1200×600\n\u003c/code>\u003c/pre>\n\u003cp>수정 위치: 개발 환경의 캔버스 값\u003c/p>\n\u003cp>다시 확인할 위치: 사용자 시나리오, 기능 요구사항, 개발 단계, 검증 계획\u003c/p>",
+      "detailHtml": "\u003cp>사람이 Markdown을 직접 고쳐도 된다. 같은 값이 여러 절에 나타나면 한 곳의 수정만으로 문서가 일관되지는 않는다. 다음 요청에서 전체 문서를 다시 검사한다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-confirm-prompt",
+      "type": "content",
+      "navTitle": "PRD 확정",
+      "section": "프롬프트와 응답",
+      "kicker": "실제 입력 4",
+      "subtitle": "남아 있는 옛 수치를 찾아 문서 전체를 맞춘다",
+      "layout": "comparison",
+      "visual": "실제 입력과 AI의 작업 결과를 구분한다.",
+      "number": 9,
+      "title": "프롬프트 ④ — 수정된 PRD 확정",
+      "body": "\u003cdiv class=\"ai-pair\">\u003csection class=\"ai-request\" aria-label=\"prompt\">\u003ch2>실제 입력 프롬프트\u003c/h2>\u003cblockquote>\n\u003cp>수정된 md 파일, 다시 확인해서 확정.\u003c/p>\n\u003c/blockquote>\u003c/section>\u003csection class=\"ai-response\" aria-label=\"response\">\u003ch2>AI 응답 요약\u003c/h2>\u003cul>\n\u003cli>환경 표는 1200×600이었지만 다른 절에 800×600이 남아 있음을 찾았다.\u003c/li>\n\u003cli>사용자 시나리오, 기능 요구사항, 개발 단계의 캔버스 값을 통일했다.\u003c/li>\n\u003cli>4배 출력, 5회 반복, 1초 정지, 전체 순환, 최소 20회 커밋도 다시 확인했다.\u003c/li>\n\u003c/ul>\u003c/section>\u003c/div>",
+      "detailHtml": "\u003cp>여기서 “확정”은 승인 버튼을 누르는 일이 아니다. 숫자, 파일명, 경로와 완료 기준이 문서 전체에서 서로 맞는지 검사하는 단계다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-development-prompt",
+      "type": "content",
+      "navTitle": "단계별 개발",
+      "section": "프롬프트와 응답",
+      "kicker": "실제 입력 5",
+      "subtitle": "작은 변경을 구현하고 확인한 뒤 커밋한다",
+      "layout": "comparison",
+      "visual": "실제 입력과 AI의 작업 결과를 구분한다.",
+      "number": 10,
+      "title": "프롬프트 ⑤ — 단계별 개발과 보고",
+      "body": "\u003cdiv class=\"ai-pair\">\u003csection class=\"ai-request\" aria-label=\"prompt\">\u003ch2>실제 입력 프롬프트\u003c/h2>\u003cblockquote>\n\u003cp>확정된 md 파일은 근거로 개발해. 중간 중간 커밋 단계별로 리포트를 해줘.\u003c/p>\n\u003c/blockquote>\u003c/section>\u003csection class=\"ai-response\" aria-label=\"response\">\u003ch2>AI 응답 요약\u003c/h2>\u003cul>\n\u003cli>캔버스와 4배 출력부터 시작해 프레임 데이터, 반복·정지, 이동·점프를 차례로 구현했다.\u003c/li>\n\u003cli>단일 \u003ccode>sonic_animation_viewer.py\u003c/code>에 10종·76프레임을 등록했다.\u003c/li>\n\u003cli>각 단계의 변경과 확인 결과를 보고했고, 이 시점에 커밋 29개를 보고했다.\u003c/li>\n\u003c/ul>\u003c/section>\u003c/div>",
+      "detailHtml": "\u003cp>29개는 해당 응답 시점의 보고 수치다. 학생은 커밋 개수만 보지 않고 각 커밋이 어떤 기능이나 검증 결과를 남겼는지 확인한다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-validation",
+      "type": "content",
+      "navTitle": "결과 검증",
+      "section": "검증",
+      "kicker": "학생 확인표",
+      "subtitle": "보고 문장마다 확인할 증거를 정한다",
+      "layout": "comparison",
+      "visual": "없음",
+      "number": 11,
+      "title": "AI의 완료 보고 검증하기",
+      "body": "\u003ctable>\n\u003cthead>\n\u003ctr>\n\u003cth>AI의 보고\u003c/th>\n\u003cth>학생의 확인 방법\u003c/th>\n\u003c/tr>\n\u003c/thead>\n\u003ctbody>\n\u003ctr>\n\u003ctd>“76프레임을 등록했다”\u003c/td>\n\u003ctd>동작별 수의 합과 이미지 밖 좌표를 확인\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>“5회 뒤 1초 정지한다”\u003c/td>\n\u003ctd>마지막 프레임과 위치가 유지되는지 관찰\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>“이동과 재생이 동시에 일어난다”\u003c/td>\n\u003ctd>프레임과 화면 위치가 함께 바뀌는지 관찰\u003c/td>\n\u003c/tr>\n\u003ctr>\n\u003ctd>“20회 이상 커밋했다”\u003c/td>\n\u003ctd>기준 커밋 이후 로그와 변경 내용을 확인\u003c/td>\n\u003c/tr>\n\u003c/tbody>\n\u003c/table>",
+      "detailHtml": "\u003cp>문법 검사, 시간 모의 실행, 실제 창 확인은 서로 다른 증거다. 프로그램이 실행되는 것만으로 모든 프레임이 맞거나 움직임이 자연스럽다고 단정하지 않는다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    },
+    {
+      "id": "lec09-viewer-summary",
+      "type": "content",
+      "navTitle": "실습 정리",
+      "section": "정리",
+      "kicker": "핵심 정리",
+      "subtitle": "요구사항, 구현, 검증을 한 흐름으로 연결한다",
+      "layout": "summary",
+      "visual": "없음",
+      "number": 12,
+      "title": "실습 정리",
+      "body": "\u003col>\n\u003cli>사람은 필요한 동작과 완료 기준을 문서로 정한다.\u003c/li>\n\u003cli>AI의 제안은 원본 자료와 실행 결과로 확인한다.\u003c/li>\n\u003cli>발견한 문제는 프롬프트로 요청하거나 문서를 직접 고친다.\u003c/li>\n\u003cli>구현은 작은 단계로 진행하고 검증 결과를 커밋에 남긴다.\u003c/li>\n\u003c/ol>\n\u003cp>\u003cstrong>다음 수업:\u003c/strong> 자동 순환 뷰어에 키 입력을 연결해 걷기·질주·점프 동작을 전환한다.\u003c/p>",
+      "detailHtml": "\u003cp>이번 뷰어는 시간이 지나면 다음 동작으로 넘어간다. 다음 입력 처리 수업에서는 사용자 입력이 동작 선택을 결정한다.\u003c/p>",
+      "image": "",
+      "imageAlt": "",
+      "imageCaption": "",
+      "extras": [],
+      "prompt": ""
+    }
+  ]
+}</script>
+<script>
+const deck=JSON.parse(document.getElementById('deck-data').textContent);
+const $=id=>document.getElementById(id), escapeText=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const htmlText=value=>Array.isArray(value)?value.join(''):(value||'');
+let index=0;const opened=new Set();
+function flow(labels){return '<div class="lec-flow">'+labels.map((l,i)=>(i?'<span aria-hidden="true">→</span>':'')+'<b>'+escapeText(l)+'</b>').join('')+'</div>'}
+function diagram(kind){
+ const begin='<div class="visual"><svg viewBox="0 0 800 430" role="img" aria-label="'+({circle:'원운동의 중심과 네 기준 좌표',triangle:'삼각 운동의 꼭짓점과 진행 비율',rectangle:'사각 운동의 함수별 이동 방향',image:'800 곱하기 600 캔버스의 중심 위치'}[kind])+'"><defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16806f"/></marker></defs>';
+ let body='';
+ if(kind==='circle')body='<path d="M100 350H740M160 390V35" stroke="#c1cbd3" fill="none"/><text x="740" y="375">x</text><text x="140" y="35">y</text><circle cx="400" cy="215" r="135" fill="none" stroke="#1767a8" stroke-width="3"/><path d="M400 215H535M523 156L510 132" stroke="#16806f" stroke-width="3" marker-end="url(#arrow)"/><circle cx="400" cy="215" r="5" fill="#16806f"/><text x="410" y="242">중심 (400, 300)</text><text x="425" y="204">r = 200</text><text x="545" y="219">0° (600, 300)</text><text x="328" y="58">90° (400, 500)</text><text x="75" y="219">180° (200, 300)</text><text x="320" y="380">270° (400, 100)</text>';
+ if(kind==='triangle')body='<path d="M145 330H655L400 70Z" stroke="#1767a8" stroke-width="3" fill="#eaf3f7"/><path d="M290 330H430M570 243L508 180M294 178L237 236" stroke="#16806f" stroke-width="3" marker-end="url(#arrow)"/><circle cx="528" cy="200" r="6" fill="#b47918"/><text x="78" y="368">A (100, 100)</text><text x="582" y="368">B (700, 100)</text><text x="335" y="48">C (400, 500)</text><text x="550" y="200">t = 0.5</text><text x="655" y="310">t = 0</text><text x="430" y="88">t = 1</text>';
+ if(kind==='rectangle')body='<rect x="155" y="85" width="490" height="245" fill="#eaf3f7" stroke="#1767a8" stroke-width="3"/><path d="M275 85H485M645 150V250M510 330H315M155 260V160" stroke="#16806f" stroke-width="4" fill="none" marker-end="url(#arrow)"/><text x="355" y="62">move_top()</text><text x="655" y="215">move_right()</text><text x="330" y="365">move_bottom()</text><text x="24" y="215">move_left()</text>';
+ if(kind==='image')body='<rect x="145" y="45" width="510" height="330" fill="#eaf3f7" stroke="#1767a8" stroke-width="2"/><path d="M145 210H655M400 45V375" stroke="#c1cbd3" stroke-dasharray="5 5"/><circle cx="400" cy="210" r="7" fill="#16806f"/><text x="415" y="202">이미지 중심 (400, 300)</text><text x="145" y="405">(0, 0)</text><text x="570" y="405">x → 800</text><text x="62" y="54">y ↑ 600</text>';
+ return begin+body+'</svg></div>';
+}
+function visual(s){
+ if(!s.image)return '';
+ return '<div class="visual"><img class="visual-image" src="'+s.image+'" alt="'+escapeText(s.imageAlt||s.title)+'">'+(s.imageCaption?'<p class="visual-caption">'+escapeText(s.imageCaption)+'</p>':'')+'</div>';
+}
+const functionDocs={
+'clip_draw':['프레임 출력','원본 이미지에서 사각형 영역을 잘라 지정한 캔버스 위치에 그립니다.','image.clip_draw(left, bottom, width, height, x, y)'],
+'clip_composite_draw':['변환 출력','원본 이미지 일부를 잘라 회전하거나 반전한 뒤 지정한 크기로 그립니다.','image.clip_composite_draw(left, bottom, width, height, 0, "h", x, y, w, h)'],
+'get_events':['이벤트 수집','현재까지 발생한 키보드, 마우스, 창 이벤트를 리스트로 반환합니다.','events = get_events()'],
+'clear_canvas':['캔버스 지우기','다음 화면을 그리기 전에 캔버스의 이전 내용을 지웁니다.','clear_canvas()'],
+'update_canvas':['화면 갱신','현재 프레임에서 그린 내용을 화면에 표시합니다.','update_canvas()'],
+'delay':['잠시 기다리기','인자로 전달한 초만큼 실행을 기다려 애니메이션 속도를 조절합니다.','delay(0.05)'],
+'close_canvas':['캔버스 닫기','게임 루프가 끝난 뒤 사용 중인 캔버스를 닫습니다.','close_canvas()'],
+'hide_cursor':['커서 숨기기','시스템 마우스 커서를 숨깁니다.','hide_cursor()'],
+'range':['반복 범위','시작값부터 종료값 직전까지 일정 간격의 정수를 만듭니다.','range(0, 800, 5)']
+};
+function highlightFunctions(){document.querySelectorAll('.slide-body pre code.language-python').forEach(code=>{
+const text=code.textContent;code.innerHTML=escapeText(text).replace(/\b(clip_draw|clip_composite_draw|get_events|clear_canvas|update_canvas|delay|close_canvas|hide_cursor|range)(?=\()/g,'<button class="fn" data-fn="$1">$1</button>');
+})}
+function localDate(){const now=new Date();return now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일'}
+function render(){
+const s=deck.slides[index],cover=s.type==='title',hasDetail=!!htmlText(s.detailHtml);document.body.classList.toggle('cover-mode',cover);
+let content=htmlText(s.body);
+const media=visual(s), grouped=media.includes('class="visual"');
+const main=grouped?'<div class="grid"><div class="content">'+content+'</div>'+media+'</div>':'<div class="content">'+content+'</div>'+media;
+$('stage').innerHTML=cover?'<article class="slide active cover-slide"><div class="cover"><h1>'+escapeText(deck.title)+'</h1><div class="date">'+escapeText('수업일: '+localDate())+'</div><div class="presenter">'+escapeText(deck.presenter)+'</div></div></article>':
+'<article class="slide active"><div class="slide-head"><div class="kicker"><span class="pill">'+escapeText(s.section)+'</span> '+escapeText(s.kicker)+'</div><h1>'+escapeText(s.title)+'</h1><div class="subtitle">'+escapeText(s.subtitle)+'</div></div><div class="slide-body">'+main+(s.prompt?'<section class="prompt" aria-label="AI 요청문"><button class="copy">요청문 복사</button>'+htmlText(s.prompt)+'</section>':'')+s.extras.map(e=>'<section class="extras"><h2>'+escapeText(e.title)+'</h2>'+htmlText(e.html)+'</section>').join('')+(hasDetail?'<details class="detail" id="detail" '+(opened.has(index)?'open':'')+'><summary>상세 설명 열기</summary><div class="detail-text">'+htmlText(s.detailHtml)+'</div></details>':'')+'</div></article>';
+$('slide-title').textContent=s.navTitle;$('count').textContent=(index+1)+' / '+deck.slides.length;$('page').textContent='← / → 로 슬라이드 이동, D 로 상세 설명 열기/닫기';
+$('bar').style.width=((index+1)/deck.slides.length*100)+'%';$('prev').disabled=index===0;$('next').disabled=index===deck.slides.length-1;$('detail-button').hidden=cover||!hasDetail;$('detail-button').setAttribute('aria-expanded',String(opened.has(index)));
+document.querySelectorAll('#toc button').forEach((b,i)=>{b.setAttribute('aria-current',String(i===index));b.classList.toggle('active',i===index)});
+const detail=$('detail'),slideIndex=index;if(detail)detail.addEventListener('toggle',()=>{if(!detail.isConnected)return;detail.open?opened.add(slideIndex):opened.delete(slideIndex);$('detail-button').setAttribute('aria-expanded',String(detail.open))});
+const copy=document.querySelector('.copy');if(copy)copy.onclick=async()=>{try{await navigator.clipboard.writeText(document.querySelector('.prompt pre').innerText);announce('요청문을 복사했습니다.')}catch{announce('요청문을 선택하여 복사해 주세요.')}};
+highlightFunctions();
+}
+function announce(msg){$('status').textContent=msg;setTimeout(()=>$('status').textContent='',3000)}
+function go(n){index=Math.max(0,Math.min(deck.slides.length-1,n));render()}
+function detailToggle(){const d=$('detail');if(!d)return;d.open=!d.open;if(d.open){opened.add(index);d.scrollIntoView({block:'start',inline:'nearest'})}else opened.delete(index)}
+function syncFullscreen(){const active=!!document.fullscreenElement;document.body.classList.toggle('fullscreen-mode',active);$('fullscreen').textContent=active?'전체 화면 종료':'전체 화면'}
+async function fullscreen(){try{document.fullscreenElement?await document.exitFullscreen():await document.documentElement.requestFullscreen();syncFullscreen()}catch{announce('이 브라우저에서는 전체 화면을 사용할 수 없습니다.')}}
+deck.slides.forEach((s,i)=>{const b=document.createElement('button');b.textContent=(i+1)+'. '+s.navTitle;b.onclick=()=>go(i);$('toc').append(b)});
+$('prev').onclick=()=>go(index-1);$('next').onclick=()=>go(index+1);$('detail-button').onclick=detailToggle;$('fullscreen').onclick=fullscreen;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-fn]');if(!b)return;const d=functionDocs[b.dataset.fn];$('func-card').innerHTML='<h3>'+d[0]+'</h3><p>'+d[1]+'</p><span class="sample">'+escapeText(d[2])+'</span>'});
+document.addEventListener('fullscreenchange',syncFullscreen);
+document.addEventListener('keydown',e=>{if(e.isComposing||e.ctrlKey||e.metaKey||e.altKey||e.target.closest('input,textarea,select,[contenteditable="true"]'))return;if(e.key==='ArrowRight'){e.preventDefault();go(index+1)}if(e.key==='ArrowLeft'){e.preventDefault();go(index-1)}if(e.key.toLowerCase()==='d'&&!document.fullscreenElement){e.preventDefault();detailToggle()}if(e.key.toLowerCase()==='f'){e.preventDefault();fullscreen()}});render();
+</script></body></html>
