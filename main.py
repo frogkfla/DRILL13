@@ -1,6 +1,7 @@
 from pico2d import *
 from boy import Boy
 from grass import Grass
+from grass import upGrass
 
 import game_world #게임 월드 모듈 임포트
 
@@ -27,11 +28,14 @@ def handle_events():
 def reset_world():
     global boy
 
+    grass = Grass()
+    game_world.add_object(grass, 2)
+
     boy = Boy()
     game_world.add_object(boy, 1) #게임 월드에 객체를 담는 함수 호출
     
-    grass = Grass()
-    game_world.add_object(grass, 0) #게임 월드에 객체를 담는 함수 호출 # ,0은 굳이 안 해도O 디폴트로 설정해둠
+    grass2 = upGrass()
+    game_world.add_object(grass2, 0) #게임 월드에 객체를 담는 함수 호출 # ,0은 굳이 안 해도O 디폴트로 설정해둠
     
 
 def update_world():
